@@ -266,8 +266,14 @@
   }
   .map-marker.found{background:var(--accent); color:#04121f; border:2px solid #fff;}
   .map-marker.unfound{
-    background:rgba(148,163,184,.55); color:#0b1220; width:16px; height:16px; font-size:10px;
-    border:1.5px solid rgba(255,255,255,.6);
+    background:rgba(148,163,184,.75); color:#0b1220; width:22px; height:22px; font-size:11px;
+    border:1.5px solid rgba(255,255,255,.8);
+  }
+  /* 찾은 한자 마커 오른쪽 위에 붙는 일련번호 꼬리표 */
+  .map-marker .map-no{
+    position:absolute; top:-7px; right:-9px; min-width:15px; height:15px; padding:0 3px;
+    border-radius:999px; background:var(--accent2); color:#241a02; font-size:9.5px; font-weight:800;
+    display:flex; align-items:center; justify-content:center; line-height:1; border:1px solid #fff;
   }
   .map-marker.me{
     background:#fff; color:#2563eb; width:16px; height:16px; font-size:10px; border:2px solid #2563eb;
@@ -542,7 +548,7 @@
     </div>
     <div class="map-legend">
       <span><span class="map-legend-dot found"></span>찾은 한자</span>
-      <span><span class="map-legend-dot unfound"></span>못 찾은 한자</span>
+      <span><span class="map-legend-dot unfound"></span>못 찾은 한자(숫자 = 일련번호)</span>
       <span><span class="map-legend-dot me"></span>내 위치</span>
     </div>
     <button class="btn-secondary" id="btn-close-map">닫기</button>
@@ -1389,6 +1395,14 @@
     ensureList.then(renderMapMarkers);
   }
 
+  /** 스프레드시트 한자목록 시트의 id(일련번호) 값을 지도에 찍을 번호로 바꾼다.
+   *  id가 숫자(예: 3)면 그대로, 'h3'처럼 글자+숫자면 숫자 부분(3)만, 숫자가 없으면 id 전체를 쓴다. */
+  function mapNumberOf(h){
+    const raw = String(h.id == null ? '' : h.id).trim();
+    const m = raw.match(/\d+/);
+    return m ? String(Number(m[0])) : raw;
+  }
+
   /** 도감과 동일하게, 이미 아는(state.captured) 정보만으로 즉시 그린다 — 서버 재조회는 하지 않는다
    *  (도감/지도를 동시에 열람할 일은 드물고, 포획·도감 동기화 시점에 이미 함께 갱신되기 때문). */
   function renderMapMarkers(){
@@ -1405,11 +1419,19 @@
       el.className = 'map-marker ' + (found ? 'found' : 'unfound');
       el.style.left = pos.xPct + '%';
       el.style.top = pos.yPct + '%';
+      const no = mapNumberOf(h);
       if (found){
         el.textContent = h.hanja;
-        el.title = h.hanja + '(' + h.reading + ')' + (h.radical ? ' · 부수 ' + h.radical : '');
+        el.title = no + '번 ' + h.hanja + '(' + h.reading + ')' + (h.radical ? ' · 부수 ' + h.radical : '');
+        if (no){
+          const tag = document.createElement('span');
+          tag.className = 'map-no';
+          tag.textContent = no;
+          el.appendChild(tag);
+        }
       } else {
-        el.textContent = '?';
+        el.textContent = no || '?';   // 못 찾은 한자는 글자 대신 일련번호만 보여 줌(정답 노출 방지)
+        el.title = no + '번 한자';
       }
       markersEl.appendChild(el);
     });
